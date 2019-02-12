@@ -3,6 +3,9 @@ This repo contains captured message traces from the E-Mount bus. They can be obt
 
 These trace files are quite messy right now as the firmware is not double buffering the data it returns to the host computer. As such messages are often interupted by clock events. see below.
 
+## Visualizer ##
+Open https://lexoptical.github.io/E-Mount-Traffic-Samples/Datagraph/ux.htm and paste the contens of a trace file into the application
+
 ## File naming
 File names act as metadata. camera-manufacturer-focallength-aperture-focusposition
 
