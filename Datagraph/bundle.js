@@ -2026,7 +2026,10 @@ var content;
 var chart;
 function nextPacket() {
     var start = content.indexOf("F0", 0);
-    var end = content.indexOf("55\n", 0);
+    var end = content.indexOf("55 ", 0);
+    if (end == -1) {
+        end = content.indexOf("55\n", 0);
+    }
     if (start == -1 && end == -1) {
         return null;
     }
@@ -2135,8 +2138,8 @@ function drawMiniMap() {
         }
         miniMapMessageLookup = [];
         var posx = 0;
-        for (var i = start; i < messages.length && i < end; i++) {
-            var msg = messages[i];
+        for (var i = start; i < exports.messages.length && i < end; i++) {
+            var msg = exports.messages[i];
             if (filtered && msg.getId() !== messageType) {
                 continue;
             }
@@ -2149,10 +2152,13 @@ function drawMiniMap() {
         ctx.putImageData(myImageData, 0, 0);
     }
 }
-var messages;
+function readBCD(buf, byteOffset) {
+    var num = buf.readUInt8(byteOffset);
+    return ("" + (num >> 4)) + (num & 15);
+}
 function graph() {
     content = document.getElementById("traceFile").value;
-    messages = loadPackets();
+    exports.messages = loadPackets();
     var start = parseInt(document.getElementById("startMessage").value, 10);
     var end = parseInt(document.getElementById("endMessage").value, 10);
     var filters = document.getElementsByClassName("lineFilter");
@@ -2170,13 +2176,14 @@ function graph() {
         var numberFormat = filter.getElementsByClassName("numberFormat")[0].value;
         var lineCheckbox = filter.getElementsByClassName("lineCheckbox")[0].checked;
         var points = [];
-        for (var i = start; i < messages.length && i < end; i++) {
-            var msg = messages[i];
+        for (var i = start; i < exports.messages.length && i < end; i++) {
+            var msg = exports.messages[i];
             if (msg.buf.readInt8(messsage_1.MessageIndicies.MESSAGE_TYPE) == messageType) {
                 var value;
                 switch (numberFormat) {
                     case "8":
-                        value = msg.buf.readUInt8(byteOffset);
+                        value = readBCD(msg.buf, byteOffset);
+                        //value = msg.buf.readUInt8(byteOffset);
                         break;
                     case "16":
                         value = msg.buf.readUInt16LE(byteOffset);
@@ -2243,6 +2250,52 @@ function graph() {
     saveState();
 }
 exports.graph = graph;
+var audioContext = new AudioContext();
+function playMessage(message) {
+    // create 2 second worth of audio buffer, with single channels and sampling rate of your device.
+    var sampleRate = audioContext.sampleRate;
+    var duration = sampleRate * .1 * message.getLength();
+    var numChannels = 1;
+    var buffer = audioContext.createBuffer(numChannels, duration, sampleRate);
+    // fill the channel with the desired frequency's data
+    var channelData = buffer.getChannelData(0);
+    for (var j = 0; j < message.getLength(); j++) {
+        var frequency = 1000 + (message.buf[j] * 4);
+        for (var i = 0; i < sampleRate; i++) {
+            channelData[(j * sampleRate) + i] = Math.sin(2 * Math.PI * frequency * i / (sampleRate));
+        }
+    }
+    // create audio source node.
+    var source = audioContext.createBufferSource();
+    source.buffer = buffer;
+    source.connect(audioContext.destination);
+    // finally start to play
+    source.start(0);
+}
+exports.playMessage = playMessage;
+function playByte(byteNum) {
+    // create 2 second worth of audio buffer, with single channels and sampling rate of your device.
+    var sampleRate = audioContext.sampleRate;
+    var samplesPerByte = sampleRate * .1;
+    var duration = samplesPerByte * miniMapMessageLookup.length;
+    var numChannels = 1;
+    var buffer = audioContext.createBuffer(numChannels, duration, sampleRate);
+    // fill the channel with the desired frequency's data
+    var channelData = buffer.getChannelData(0);
+    for (var j = 0; j < miniMapMessageLookup.length; j++) {
+        var frequency = 1000 + (miniMapMessageLookup[j].buf[byteNum] * 4);
+        for (var i = 0; i < samplesPerByte; i++) {
+            channelData[(j * samplesPerByte) + i] = Math.sin(2 * Math.PI * frequency * i / (sampleRate));
+        }
+    }
+    // create audio source node.
+    var source = audioContext.createBufferSource();
+    source.buffer = buffer;
+    source.connect(audioContext.destination);
+    // finally start to play
+    source.start(0);
+}
+exports.playByte = playByte;
 
 }).call(this,require("buffer").Buffer)
 },{"./messsage":5,"buffer":2,"chart.js":6}],5:[function(require,module,exports){

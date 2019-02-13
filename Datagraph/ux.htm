@@ -3,25 +3,36 @@
 	<title>DataGraph 1.0.0</title>
 	<link href="https://fonts.googleapis.com/css?family=Roboto+Mono" rel="stylesheet">
 	<link rel="stylesheet" href="ux.css">
-	<script type="text/javascript" src="./node_modules/chart.js/dist/Chart.bundle.js"></script>
+	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.4.0/Chart.bundle.min.js"></script>
 	<script type="text/javascript" src="bundle.js"></script>
 
 </head>
 <body onload="datagraph.loadState();datagraph.graph();">
 	<h1>DataGraph 1.0.0</h1>
 	<hr />
-	<h2>File load</h2>
+	<h2>Trace File</h2>
+	<p>Paste the trace you want to analyze below</p>
 	<textarea class="traceFile" id="traceFile" rows=8></textarea>
 	<hr />
-	<h2>Trend Analysis</h2>
-	<div class="chart-container">
-		<canvas id="myChart" width="600" height="400"></canvas>
-	</div>
-	<button id="redraw" onclick="datagraph.graph()">redraw</button><br />
-	<p>Message offsets: <input type="text" id="startMessage" />
-		<input type="text" id="endMessage" />
+	<h2>Trace File Stats</h2>
+	<p id="messageStats"></p>
+	<hr />
+	<p>Trace File Range start#:<input type="text" id="startMessage" /> end#:<input type="text" id="endMessage" />
 	</p>
-	<br />
+	<hr />
+	<h2>Minimap</h2>
+	<p>Color option: <select class="colorMapOption">
+			<option value="0">thermal</option>
+			<option value="1">cyan</option>
+		</select>
+	</p>
+	<p>Filtered: <input id="filtered" type="checkbox"> (Will display only messages matched by filter 1)</p>
+	<p id="minimappos">[Ready]</p>
+	<div style="overflow:auto;">
+		<canvas id="messageOverTime" width="800" height="256"></canvas>
+	</div>
+	<hr />
+	<h2>Filters</h2>
 	<p>Byte offsets are from the beginning of the message body (byte 6) in the raw message</p>
 	<div class="lineFilter">
 		<p><input type="text" class="messageType" placeholder="Message Type (Hex)" />
@@ -52,20 +63,11 @@
 		</p>
 	</div>
 	<hr />
-	<h2>Message Stats</h2>
-	<p id="messageStats"></p>
-	<hr />
-	<h2>Minimap</h2>
-	<p>Color option: <select class="colorMapOption">
-			<option value="0">thermal</option>
-			<option value="1">cyan</option>
-		</select>
-	</p>
-	<p>Filtered: <input id="filtered" type="checkbox"></p>
-	<p id="minimappos">[Ready]</p>
-	<div style="overflow:auto;">
-		<canvas id="messageOverTime" width="800" height="256"></canvas>
+	<h2>Trend Analysis</h2>
+	<div class="chart-container">
+		<canvas id="myChart" width="600" height="400"></canvas>
 	</div>
+	<button id="redraw" onclick="datagraph.graph()">redraw</button><br />
 	<br />
 </body>
 </html>

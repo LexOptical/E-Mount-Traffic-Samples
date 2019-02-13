@@ -6,7 +6,10 @@ let chart: Chart;
 
 function nextPacket() {
 	var start = content.indexOf("F0", 0);
-	var end = content.indexOf("55\n", 0);
+	var end = content.indexOf("55 ", 0);
+	if (end == -1) {
+		end = content.indexOf("55\n", 0);
+	}
 	if (start == -1 && end == -1) {
 		return null;
 	}
@@ -147,8 +150,7 @@ function drawMiniMap() {
 	}
 }
 
-
-var messages: SonyMessage[];
+export var messages: SonyMessage[];
 export function graph() {
 	content = (document.getElementById("traceFile") as HTMLTextAreaElement).value;
 	messages = loadPackets();
@@ -256,4 +258,59 @@ export function graph() {
 	}
 	drawMiniMap();
 	saveState();
+}
+
+
+
+var audioContext = new AudioContext();
+export function playMessage(message: SonyMessage) {
+	// create 2 second worth of audio buffer, with single channels and sampling rate of your device.
+	var sampleRate = audioContext.sampleRate;
+	var duration = sampleRate * .1 * message.getLength();
+	var numChannels = 1;
+	var buffer = audioContext.createBuffer(numChannels, duration, sampleRate);
+	// fill the channel with the desired frequency's data
+	var channelData = buffer.getChannelData(0);
+	for (var j = 0; j < message.getLength(); j++) {
+		let frequency = 1000 + (message.buf[j] * 4);
+		for (var i = 0; i < sampleRate; i++) {
+
+			channelData[(j * sampleRate) + i] = Math.sin(2 * Math.PI * frequency * i / (sampleRate));
+		}
+	}
+
+	// create audio source node.
+	var source = audioContext.createBufferSource();
+	source.buffer = buffer;
+	source.connect(audioContext.destination);
+
+	// finally start to play
+	source.start(0);
+}
+
+export function playByte(byteNum: number) {
+	// create 2 second worth of audio buffer, with single channels and sampling rate of your device.
+	var sampleRate = audioContext.sampleRate;
+	var samplesPerByte = sampleRate * .1;
+	var duration = samplesPerByte * miniMapMessageLookup.length;
+	var numChannels = 1;
+	var buffer = audioContext.createBuffer(numChannels, duration, sampleRate);
+
+	// fill the channel with the desired frequency's data
+	var channelData = buffer.getChannelData(0);
+	for (var j = 0; j < miniMapMessageLookup.length; j++) {
+		let frequency = 1000 + (miniMapMessageLookup[j].buf[byteNum] * 4);
+		for (var i = 0; i < samplesPerByte; i++) {
+
+			channelData[(j * samplesPerByte) + i] = Math.sin(2 * Math.PI * frequency * i / (sampleRate));
+		}
+	}
+
+	// create audio source node.
+	var source = audioContext.createBufferSource();
+	source.buffer = buffer;
+	source.connect(audioContext.destination);
+
+	// finally start to play
+	source.start(0);
 }
