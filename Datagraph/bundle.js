@@ -2038,6 +2038,9 @@ function nextPacket() {
     return match;
 }
 function loadPackets() {
+    if (!content.endsWith(" ") && !content.endsWith("\n")) {
+        content = content + "\n";
+    }
     var counts = {};
     var messages = new Array();
     var packet = nextPacket();
@@ -2152,10 +2155,6 @@ function drawMiniMap() {
         ctx.putImageData(myImageData, 0, 0);
     }
 }
-function readBCD(buf, byteOffset) {
-    var num = buf.readUInt8(byteOffset);
-    return ("" + (num >> 4)) + (num & 15);
-}
 function graph() {
     content = document.getElementById("traceFile").value;
     exports.messages = loadPackets();
@@ -2182,8 +2181,7 @@ function graph() {
                 var value;
                 switch (numberFormat) {
                     case "8":
-                        value = readBCD(msg.buf, byteOffset);
-                        //value = msg.buf.readUInt8(byteOffset);
+                        value = msg.buf.readUInt8(byteOffset);
                         break;
                     case "16":
                         value = msg.buf.readUInt16LE(byteOffset);

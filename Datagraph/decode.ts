@@ -19,6 +19,9 @@ function nextPacket() {
 }
 
 function loadPackets(): SonyMessage[] {
+	if(!content.endsWith(" ") && !content.endsWith("\n")){
+		content = content + "\n";
+	}
 	var counts: any = {};
 	var messages = new Array();
 	var packet = nextPacket();
