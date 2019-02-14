@@ -2037,19 +2037,29 @@ function nextPacket() {
     content = content.substring(end + 2);
     return match;
 }
+function nextPacketSigrok() {
+    var end = content.indexOf("\n", 0);
+    if (end == -1) {
+        return null;
+    }
+    var match = content.substring(0, end + 1);
+    content = content.substring(end + 1);
+    return match;
+}
 function loadPackets() {
+    var sigrok = document.getElementById("fileFormat").value === "1";
     if (!content.endsWith(" ") && !content.endsWith("\n")) {
         content = content + "\n";
     }
     var counts = {};
     var messages = new Array();
-    var packet = nextPacket();
+    var packet = sigrok ? nextPacketSigrok() : nextPacket();
     while (packet != null) {
-        var message = new messsage_1.SonyMessage(packet);
+        var message = new messsage_1.SonyMessage(packet, sigrok);
         var id = message.getIdHex();
         counts[id] = counts[id] ? counts[id] + 1 : 1;
         messages.push(message);
-        packet = nextPacket();
+        packet = sigrok ? nextPacketSigrok() : nextPacket();
     }
     document.getElementById("messageStats").innerHTML = printCounts(counts);
     document.getElementById("startMessage").value = '0';
@@ -2314,9 +2324,9 @@ var MessageIndicies = /** @class */ (function () {
 }());
 exports.MessageIndicies = MessageIndicies;
 var SonyMessage = /** @class */ (function () {
-    function SonyMessage(hexString) {
-        this.hexString = hexString;
-        this.buf = buffer_1.Buffer.from(hexString, "hex");
+    function SonyMessage(hexString, sigrok) {
+        this.hexString = sigrok ? this.fromSiggroc(hexString) : hexString;
+        this.buf = buffer_1.Buffer.from(this.hexString, "hex");
         console.assert(this.getLength() == this.buf.length, "BAD MESSAGE LENGTH");
     }
     SonyMessage.prototype.getId = function () {
@@ -2327,6 +2337,25 @@ var SonyMessage = /** @class */ (function () {
     };
     SonyMessage.prototype.getLength = function () {
         return this.buf.readInt16LE(MessageIndicies.MESSAGE_LENGTH); // (this.buf[MessageIndicies.MESSAGE_LENGTH+1] << 8) + this.buf[MessageIndicies.MESSAGE_LENGTH];
+    };
+    SonyMessage.prototype.getToken = function (input, start, end) {
+        var startIndex = input.indexOf(start, 0);
+        var endIndex = input.indexOf(end, startIndex + start.length);
+        if (startIndex == -1 && endIndex == -1) {
+            throw ("missing token");
+        }
+        return input.substring(startIndex + start.length, endIndex);
+    };
+    SonyMessage.prototype.fromSiggroc = function (input) {
+        //0.146865, Plen: 0029, ftype: 02, snum: 00, speed: 750000.0, rxtx: 1, extra: 7, csum: 0932, data: "01 FF FF FF FF FF FF FF FF FF 0F 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 "
+        var len = this.getToken(input, "Plen: ", ",");
+        len = len.substring(2, 4) + len.substring(0, 2);
+        var type = this.getToken(input, "ftype: ", ",");
+        var seq = this.getToken(input, "snum: ", ",");
+        var data = this.getToken(input, "data: \"", "\"");
+        data = data.replace(/\s+/g, '');
+        var checksum = this.getToken(input, "csum: ", ",");
+        return "F0" + len + type + seq + data + checksum + "55";
     };
     return SonyMessage;
 }());

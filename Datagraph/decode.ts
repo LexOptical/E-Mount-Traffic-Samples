@@ -18,19 +18,31 @@ function nextPacket() {
 	return match;
 }
 
+function nextPacketSigrok(){
+	var end = content.indexOf("\n", 0);
+	if (end == -1) {
+		return null;
+	}
+	var match = content.substring(0, end + 1);
+	content = content.substring(end + 1);
+	return match;
+}
+
 function loadPackets(): SonyMessage[] {
+	
+	var sigrok = (document.getElementById("fileFormat") as HTMLInputElement).value === "1";
 	if(!content.endsWith(" ") && !content.endsWith("\n")){
 		content = content + "\n";
 	}
 	var counts: any = {};
 	var messages = new Array();
-	var packet = nextPacket();
+	var packet = sigrok ? nextPacketSigrok() : nextPacket();
 	while (packet != null) {
-		var message = new SonyMessage(packet);
+		var message = new SonyMessage(packet, sigrok);
 		var id = message.getIdHex();
 		counts[id] = counts[id] ? counts[id] + 1 : 1;
 		messages.push(message);
-		packet = nextPacket();
+		packet = sigrok ? nextPacketSigrok() : nextPacket();
 	}
 
 	(document.getElementById("messageStats") as HTMLParagraphElement).innerHTML = printCounts(counts);
