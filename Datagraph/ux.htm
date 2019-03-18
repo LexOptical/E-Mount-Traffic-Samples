@@ -1,6 +1,6 @@
 <html>
 <head>
-	<title>DataGraph 1.0.0</title>
+	<title>DataGraph 1.0.1</title>
 	<link href="https://fonts.googleapis.com/css?family=Roboto+Mono" rel="stylesheet">
 	<link rel="stylesheet" href="ux.css">
 	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.4.0/Chart.bundle.min.js"></script>
@@ -33,7 +33,7 @@
 	<p>Filtered: <input id="filtered" type="checkbox"> (Will display only messages matched by filter 1)</p>
 	<p id="minimappos">[Ready]</p>
 	<div style="overflow:auto;">
-		<canvas id="messageOverTime" width="800" height="256"></canvas>
+		<canvas id="messageOverTime" width="800" height="256" style="zoom:8; image-rendering: pixelated;"></canvas>
 	</div>
 	<hr />
 	<h2>Filters</h2>
@@ -50,6 +50,8 @@
 				<option value="f64">Float 64bit</option>
 			</select>
 			line:<input class="lineCheckbox" type="checkbox">
+			<button onclick="datagraph.playByte()">▶</button>
+			<button onclick="datagraph.stopPlayback()">◼</button
 		</p>
 	</div>
 	<div class="lineFilter">

@@ -2024,6 +2024,7 @@ var messsage_1 = require("./messsage");
 var chart_js_1 = require("chart.js");
 var content;
 var chart;
+var minimapScale = 8;
 function nextPacket() {
     var start = content.indexOf("F0", 0);
     var end = content.indexOf("55 ", 0);
@@ -2067,7 +2068,7 @@ function loadPackets() {
     return messages;
 }
 function printCounts(counts) {
-    var html = "<table><tr><th>Message ID</th><th>Count</th></tr>";
+    var html = "<table><tr><th>Message ID</th><th style=\"padding-left: 4px;\">Count</th></tr>";
     var keys = Object.keys(counts);
     keys.forEach(function (key) {
         html += "<tr><td>" + key + "</td><td>" + counts[key] + "</td></tr>";
@@ -2093,19 +2094,21 @@ function setColorIndicesForCoordQuad(x, y, value) {
 function saveState() {
     var localStorage = window.localStorage;
     localStorage.setItem("data", document.getElementById("traceFile").value);
+    localStorage.setItem("data_type", document.getElementById("fileFormat").value);
 }
 function loadState() {
     var localStorage = window.localStorage;
     document.getElementById("traceFile").value = localStorage.getItem("data") || "";
+    document.getElementById("fileFormat").value = localStorage.getItem("data_type") || "";
 }
 exports.loadState = loadState;
 function updateMiniMapPos(event) {
-    var x = event.layerX;
-    var y = event.layerY;
+    var x = Math.floor(event.layerX / minimapScale);
+    var y = Math.floor(event.layerY / minimapScale);
     var minimappos = document.getElementById("minimappos");
-    var message = miniMapMessageLookup[x >> 1];
-    if (message && (y >> 1) < message.getLength()) {
-        minimappos.innerText = "Messge type:" + message.getIdHex() + " byte#:" + (y >> 1) + " value: " + hexFormat(message.buf.readUInt8(y >> 1));
+    var message = miniMapMessageLookup[x];
+    if (message && (y) < message.getLength() - messsage_1.MessageIndicies.END_LENGTH && y >= messsage_1.MessageIndicies.START_OF_BODY) {
+        minimappos.innerText = "Messge type:" + message.getIdHex() + " byte#:" + (y) + " body#:" + ((y) - messsage_1.MessageIndicies.START_OF_BODY) + " value: " + hexFormat(message.buf.readUInt8(y));
     }
     else {
         minimappos.innerText = "out of bounds";
@@ -2151,14 +2154,14 @@ function drawMiniMap() {
         }
         miniMapMessageLookup = [];
         var posx = 0;
-        for (var i = start; i < exports.messages.length && i < end; i++) {
+        for (var i = start; i < exports.messages.length && i < end && posx < 800; i++) {
             var msg = exports.messages[i];
             if (filtered && msg.getId() !== messageType) {
                 continue;
             }
             miniMapMessageLookup[posx] = msg;
             for (var j = messsage_1.MessageIndicies.START_OF_BODY; j < msg.buf.length - messsage_1.MessageIndicies.END_LENGTH; j++) {
-                setColorIndicesForCoordQuad(posx, j, msg.buf.readUInt8(j));
+                setColorIndicesForCoord(posx, j, msg.buf.readUInt8(j));
             }
             posx++;
         }
@@ -2259,6 +2262,7 @@ function graph() {
 }
 exports.graph = graph;
 var audioContext = new AudioContext();
+var source;
 function playMessage(message) {
     // create 2 second worth of audio buffer, with single channels and sampling rate of your device.
     var sampleRate = audioContext.sampleRate;
@@ -2274,14 +2278,25 @@ function playMessage(message) {
         }
     }
     // create audio source node.
-    var source = audioContext.createBufferSource();
+    if (source) {
+        stopPlayback();
+    }
+    source = audioContext.createBufferSource();
     source.buffer = buffer;
     source.connect(audioContext.destination);
     // finally start to play
     source.start(0);
 }
 exports.playMessage = playMessage;
+function stopPlayback() {
+    source.stop();
+}
+exports.stopPlayback = stopPlayback;
 function playByte(byteNum) {
+    if (byteNum === undefined) {
+        byteNum = parseInt(document.getElementsByClassName("lineFilter")[0].getElementsByClassName("byteOffset")[0]
+            .value, 10);
+    }
     // create 2 second worth of audio buffer, with single channels and sampling rate of your device.
     var sampleRate = audioContext.sampleRate;
     var samplesPerByte = sampleRate * .1;
@@ -2297,7 +2312,10 @@ function playByte(byteNum) {
         }
     }
     // create audio source node.
-    var source = audioContext.createBufferSource();
+    if (source) {
+        stopPlayback();
+    }
+    source = audioContext.createBufferSource();
     source.buffer = buffer;
     source.connect(audioContext.destination);
     // finally start to play

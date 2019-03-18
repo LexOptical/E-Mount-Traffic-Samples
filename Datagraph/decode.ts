@@ -3,6 +3,7 @@ import { Chart, ChartDataSets, ChartConfiguration, ChartPoint } from "chart.js";
 
 var content: string;
 let chart: Chart;
+const minimapScale = 8;
 
 function nextPacket() {
 	var start = content.indexOf("F0", 0);
@@ -18,7 +19,7 @@ function nextPacket() {
 	return match;
 }
 
-function nextPacketSigrok(){
+function nextPacketSigrok() {
 	var end = content.indexOf("\n", 0);
 	if (end == -1) {
 		return null;
@@ -29,9 +30,9 @@ function nextPacketSigrok(){
 }
 
 function loadPackets(): SonyMessage[] {
-	
+
 	var sigrok = (document.getElementById("fileFormat") as HTMLInputElement).value === "1";
-	if(!content.endsWith(" ") && !content.endsWith("\n")){
+	if (!content.endsWith(" ") && !content.endsWith("\n")) {
 		content = content + "\n";
 	}
 	var counts: any = {};
@@ -53,7 +54,7 @@ function loadPackets(): SonyMessage[] {
 }
 
 function printCounts(counts: any): string {
-	var html = "<table><tr><th>Message ID</th><th>Count</th></tr>";
+	var html = "<table><tr><th>Message ID</th><th style=\"padding-left: 4px;\">Count</th></tr>";
 	var keys = Object.keys(counts);
 	keys.forEach(key => {
 		html += `<tr><td>${key}</td><td>${counts[key]}</td></tr>`;
@@ -82,20 +83,22 @@ function setColorIndicesForCoordQuad(x: number, y: number, value: number) {
 function saveState() {
 	var localStorage = window.localStorage;
 	localStorage.setItem("data", (document.getElementById("traceFile") as HTMLTextAreaElement).value);
+	localStorage.setItem("data_type", (document.getElementById("fileFormat") as HTMLTextAreaElement).value);
 }
 
 export function loadState() {
 	var localStorage = window.localStorage;
 	(document.getElementById("traceFile") as HTMLTextAreaElement).value = localStorage.getItem("data") || "";
+	(document.getElementById("fileFormat") as HTMLTextAreaElement).value = localStorage.getItem("data_type") || "";
 }
 
 function updateMiniMapPos(event: any) {
-	var x = event.layerX;
-	var y = event.layerY;
+	var x = Math.floor(event.layerX / minimapScale);
+	var y = Math.floor(event.layerY / minimapScale);
 	let minimappos = (document.getElementById("minimappos") as HTMLParagraphElement);
-	let message = miniMapMessageLookup[x >> 1];
-	if (message && (y >> 1) < message.getLength()) {
-		minimappos.innerText = "Messge type:" + message.getIdHex() + " byte#:" + (y >> 1) + " value: " + hexFormat(message.buf.readUInt8(y >> 1));
+	let message = miniMapMessageLookup[x];
+	if (message && (y) < message.getLength() - MessageIndicies.END_LENGTH && y >= MessageIndicies.START_OF_BODY) {
+		minimappos.innerText = "Messge type:" + message.getIdHex() + " byte#:" + (y) + " body#:" + ((y) - MessageIndicies.START_OF_BODY) + " value: " + hexFormat(message.buf.readUInt8(y));
 	} else {
 		minimappos.innerText = "out of bounds";
 	}
@@ -149,14 +152,14 @@ function drawMiniMap() {
 		}
 		miniMapMessageLookup = [];
 		let posx = 0;
-		for (let i = start; i < messages.length && i < end; i++) {
+		for (let i = start; i < messages.length && i < end && posx < 800; i++) {
 			var msg = messages[i];
 			if (filtered && msg.getId() !== messageType) {
 				continue;
 			}
 			miniMapMessageLookup[posx] = msg;
 			for (let j = MessageIndicies.START_OF_BODY; j < msg.buf.length - MessageIndicies.END_LENGTH; j++) {
-				setColorIndicesForCoordQuad(posx, j, msg.buf.readUInt8(j));
+				setColorIndicesForCoord(posx, j, msg.buf.readUInt8(j));
 			}
 			posx++;
 		}
@@ -278,6 +281,7 @@ export function graph() {
 
 
 var audioContext = new AudioContext();
+var source: AudioBufferSourceNode;
 export function playMessage(message: SonyMessage) {
 	// create 2 second worth of audio buffer, with single channels and sampling rate of your device.
 	var sampleRate = audioContext.sampleRate;
@@ -295,15 +299,28 @@ export function playMessage(message: SonyMessage) {
 	}
 
 	// create audio source node.
-	var source = audioContext.createBufferSource();
+	if (source) {
+		stopPlayback();
+	}
+	source = audioContext.createBufferSource();
 	source.buffer = buffer;
 	source.connect(audioContext.destination);
 
 	// finally start to play
 	source.start(0);
 }
+export function stopPlayback() {
+	source.stop();
+}
 
-export function playByte(byteNum: number) {
+export function playByte(byteNum: number | undefined) {
+	if (byteNum === undefined) {
+		byteNum = parseInt(
+			(document.getElementsByClassName("lineFilter")[0].getElementsByClassName("byteOffset")[0] as HTMLInputElement)
+				.value,
+			10
+		)
+	}
 	// create 2 second worth of audio buffer, with single channels and sampling rate of your device.
 	var sampleRate = audioContext.sampleRate;
 	var samplesPerByte = sampleRate * .1;
@@ -322,7 +339,10 @@ export function playByte(byteNum: number) {
 	}
 
 	// create audio source node.
-	var source = audioContext.createBufferSource();
+	if (source) {
+		stopPlayback();
+	}
+	source = audioContext.createBufferSource();
 	source.buffer = buffer;
 	source.connect(audioContext.destination);
 
